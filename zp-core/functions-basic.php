@@ -70,11 +70,12 @@ define("ZP_SEARCH", 16);
 define("ZP_SEARCH_LINKED", 32);
 define("ZP_ALBUM_LINKED", 64);
 define('ZP_IMAGE_LINKED', 128);
-define('ZP_ZENPAGE_NEWS_ARTICLE', 256);
-define('ZP_ZENPAGE_NEWS_CATEGORY', 512);
-define('ZP_ZENPAGE_NEWS_DATE', 1024);
-define('ZP_ZENPAGE_PAGE', 2048);
-define('ZP_ZENPAGE_SINGLE', 4096);
+define('ZP_ZENPAGE_NEWS_PAGE', 256);
+define('ZP_ZENPAGE_NEWS_ARTICLE', 512);
+define('ZP_ZENPAGE_NEWS_CATEGORY', 1024);
+define('ZP_ZENPAGE_NEWS_DATE', 2048);
+define('ZP_ZENPAGE_PAGE', 4096);
+define('ZP_ZENPAGE_SINGLE', 8192);
 
 switch (PHP_MAJOR_VERSION) {
 	case 5:
@@ -509,13 +510,15 @@ function rewrite_get_album_image($albumvar, $imagevar) {
 					$ralbum .= '.alb';
 				} else {
 					//	Perhaps a dynamicalbum/image
-					$rimage = basename($ralbum);
-					$ralbum = trim(dirname($ralbum), '/');
-					$path = internalToFilesystem(getAlbumFolder(SERVERPATH) . $ralbum);
-					if (!is_dir($path)) {
-						if (file_exists($path . '.alb')) {
-							//	it is a dynamic album sans suffix
-							$ralbum .= '.alb';
+					$path = trim(dirname($ralbum), '/');
+					if ($path != '.') {
+						$path = internalToFilesystem(getAlbumFolder(SERVERPATH) . $path);
+						if (!is_dir($path)) {
+							if (file_exists($path . '.alb')) {
+								//	it is a dynamic album sans suffix
+								$rimage = basename($ralbum);
+								$ralbum = trim(dirname($ralbum), '/') . '.alb';
+							}
 						}
 					}
 				}

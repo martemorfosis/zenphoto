@@ -119,13 +119,6 @@ function adminToolbox() {
 					</li>
 					<?php
 				}
-				if (zp_loggedin(COMMENT_RIGHTS)) {
-					?>
-					<li>
-						<?php printLink($zf . '/admin-comments.php', gettext("Comments"), NULL, NULL, NULL); ?>
-					</li>
-					<?php
-				}
 				if (zp_loggedin(USER_RIGHTS)) {
 					?>
 					<li>
@@ -557,19 +550,19 @@ function getAllAlbums($album = NULL) {
 /**
  * Returns the number of pages for the current object
  *
- * @param bool $oneImagePage set to true if your theme collapses all image thumbs
+ * @param bool $_oneImagePage set to true if your theme collapses all image thumbs
  * or their equivalent to one page. This is typical with flash viewer themes
  *
  * @return int
  */
-function getTotalPages($oneImagePage = false) {
-	global $_zp_gallery, $_zp_current_album, $_firstPageImages, $_zp_zenpage;
+function getTotalPages($_oneImagePage = false) {
+	global $_zp_gallery, $_zp_current_album, $_firstPageImages, $_zp_zenpage, $_zp_current_category;
 	if (in_context(ZP_ALBUM | ZP_SEARCH)) {
 		$albums_per_page = max(1, getOption('albums_per_page'));
 		$pageCount = (int) ceil(getNumAlbums() / $albums_per_page);
 		$imageCount = getNumImages();
-		if ($oneImagePage) {
-			if ($oneImagePage === true) {
+		if ($_oneImagePage) {
+			if ($_oneImagePage === true) {
 				$imageCount = min(1, $imageCount);
 			} else {
 				$imageCount = 0;
@@ -578,15 +571,20 @@ function getTotalPages($oneImagePage = false) {
 		$images_per_page = max(1, getOption('images_per_page'));
 		$pageCount = ($pageCount + ceil(($imageCount - $_firstPageImages) / $images_per_page));
 		return $pageCount;
-	} else if (isset($_zp_zenpage)) {
-		return (int) ceil($_zp_zenpage->getTotalArticles() / ZP_ARTICLES_PER_PAGE);
-	} else if (in_context(ZP_INDEX)) {
+	} else if (get_context() == ZP_INDEX) {
 		if (galleryAlbumsPerPage() != 0) {
 			return (int) ceil($_zp_gallery->getNumAlbums() / galleryAlbumsPerPage());
 		} else {
 			return NULL;
 		}
 		return NULL;
+	} else if (isset($_zp_zenpage)) {
+		if (in_context(ZP_ZENPAGE_NEWS_CATEGORY)) {
+			$cat = $_zp_current_category;
+		} else {
+			$cat = NULL;
+		}
+		return (int) ceil(count($_zp_zenpage->getArticles(0, NULL, true, NULL, NULL, NULL, $cat)) / ZP_ARTICLES_PER_PAGE);
 	}
 }
 
@@ -745,14 +743,14 @@ function printPageList($class = 'pagelist', $id = NULL, $navlen = 9) {
 /**
  * returns a page nav list.
  *
- * @param bool $oneImagePage set to true if there is only one image page as, for instance, in flash themes
+ * @param bool $_oneImagePage set to true if there is only one image page as, for instance, in flash themes
  * @param int $navlen Number of navigation links to show (0 for all pages). Works best if the number is odd.
  * @param bool $firstlast Add links to the first and last pages of you gallery
  * @param int $current the current page
  * @param int $total total number of pages
  *
  */
-function getPageNavList($oneImagePage, $navlen, $firstlast, $current, $total) {
+function getPageNavList($_oneImagePage, $navlen, $firstlast, $current, $total) {
 	$result = array();
 	if (hasPrevPage()) {
 		$result['prev'] = getPrevPageURL();
@@ -794,17 +792,17 @@ function getPageNavList($oneImagePage, $navlen, $firstlast, $current, $total) {
  *
  * @param string $prevtext Insert here the linktext like 'previous page'
  * @param string $nexttext Insert here the linktext like 'next page'
- * @param bool $oneImagePage set to true if there is only one image page as, for instance, in flash themes
+ * @param bool $_oneImagePage set to true if there is only one image page as, for instance, in flash themes
  * @param string $nextprev set to true to get the 'next' and 'prev' links printed
  * @param string $class Insert here the CSS-class name you want to style the link with (default is "pagelist")
  * @param string $id Insert here the CSS-ID name if you want to style the link with this
  * @param bool $firstlast Add links to the first and last pages of you gallery
  * @param int $navlen Number of navigation links to show (0 for all pages). Works best if the number is odd.
  */
-function printPageListWithNav($prevtext, $nexttext, $oneImagePage = false, $nextprev = true, $class = 'pagelist', $id = NULL, $firstlast = true, $navlen = 9) {
+function printPageListWithNav($prevtext, $nexttext, $_oneImagePage = false, $nextprev = true, $class = 'pagelist', $id = NULL, $firstlast = true, $navlen = 9) {
 	$current = getCurrentPage();
-	$total = max(1, getTotalPages($oneImagePage));
-	$nav = getPageNavList($oneImagePage, $navlen, $firstlast, $current, $total);
+	$total = max(1, getTotalPages($_oneImagePage));
+	$nav = getPageNavList($_oneImagePage, $navlen, $firstlast, $current, $total);
 	if (count($nav) < 4) {
 		$class .= ' disabled_nav';
 	}
@@ -3926,7 +3924,7 @@ function openedForComments($what = 3) {
  * index.php script before the theme script is loaded.
  */
 function setThemeColumns() {
-	global $_zp_current_album, $_firstPageImages, $oneImagePage;
+	global $_zp_current_album, $_firstPageImages, $_oneImagePage;
 	$_firstPageImages = false;
 	if (($albumColumns = getOption('albums_per_row')) <= 1)
 		$albumColumns = false;
@@ -3940,7 +3938,7 @@ function setThemeColumns() {
 	if (($imageColumns) && (($imgcount % $imageColumns) != 0)) {
 		setOption('images_per_page', $imgcount = ((floor($imgcount / $imageColumns) + 1) * $imageColumns), false);
 	}
-	if ((getOption('thumb_transition') && !$oneImagePage) && in_context(ZP_ALBUM | ZP_SEARCH) && $albumColumns && $imageColumns) {
+	if ((getOption('thumb_transition') && !$_oneImagePage) && in_context(ZP_ALBUM | ZP_SEARCH) && $albumColumns && $imageColumns) {
 		$count = getNumAlbums();
 		if ($count == 0) {
 			$_firstPageImages = 0;
@@ -4268,6 +4266,67 @@ function printCodeblock($number = 1, $what = NULL) {
 		eval('?>' . $codeblock);
 		set_context($context);
 	}
+}
+
+/**
+ * Checks for URL page out-of-bounds for "standard" themes
+ * Note: This function assumes that an "index" page will display albums
+ * and the pagination be determined by them. Any other "index" page strategy needs to be
+ * handled by the theme itself.
+ *
+ * @param boolean $request
+ * @param string $gallery_page
+ * @param int $page
+ * @return boolean will be true if all is well, false if a 404 error should occur
+ */
+function checkPageValidity($request, $gallery_page, $page) {
+	global $_zp_gallery, $_firstPageImages, $_oneImagePage, $_zp_zenpage, $_zp_current_category;
+	$count = NULL;
+	switch ($gallery_page) {
+		case 'album.php':
+		case 'search.php':
+			$albums_per_page = max(1, getOption('albums_per_page'));
+			$pageCount = (int) ceil(getNumAlbums() / $albums_per_page);
+			$imageCount = getNumImages();
+			if ($_oneImagePage) {
+				if ($_oneImagePage === true) {
+					$imageCount = min(1, $imageCount);
+				} else {
+					$imageCount = 0;
+				}
+			}
+			$images_per_page = max(1, getOption('images_per_page'));
+			$count = ($pageCount + (int) ceil(($imageCount - $_firstPageImages) / $images_per_page));
+			break;
+		case 'index.php':
+			if (galleryAlbumsPerPage() != 0) {
+				$count = (int) ceil($_zp_gallery->getNumAlbums() / galleryAlbumsPerPage());
+			}
+			break;
+		case 'news.php':
+			if (in_context(ZP_ZENPAGE_NEWS_CATEGORY)) {
+				$cat = $_zp_current_category;
+			} else {
+				$cat = NULL;
+			}
+			$count = (int) ceil(count($_zp_zenpage->getArticles(0, NULL, true, NULL, NULL, NULL, $cat)) / ZP_ARTICLES_PER_PAGE);
+			break;
+	}
+	if ($page > $count) {
+		$request = false; //	page is out of range
+	}
+
+	return $request;
+}
+
+/**
+ * Used as the default page url checker. Page url checking is an Opt-in for now at least.
+ * It simply returns the parameter
+ * @param bool $request
+ * @return bool
+ */
+function checkPageValidityDummy($request) {
+	return $request;
 }
 
 zp_register_filter('theme_head', 'printZenJavascripts', 9999);
